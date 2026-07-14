@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>GeoRuta: Contador de Provincias</title>
+  <meta name="description" content="Rastrea tu progreso de Geocaching en España y Portugal. App PWA offline.">
+  <!-- Favicon: data URI SVG -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 512 512' fill='none'%3E%3Ccircle cx='256' cy='256' r='240' fill='%23f8f1e3' stroke='%235f452a' stroke-width='32'/%3E%3Ccircle cx='256' cy='175' r='105' fill='%2302874d'/%3E%3Cpath d='M256 280 L185 420 L327 420 Z' fill='%2302874d'/%3E%3Crect x='186' y='115' width='140' height='95' rx='14' fill='%23f4e9d8' stroke='%235f452a' stroke-width='14'/%3E%3Cline x1='200' y1='145' x2='312' y2='145' stroke='%235f452a' stroke-width='10' stroke-linecap='round'/%3E%3Ctext x='256' y='182' font-family='Arial, Helvetica, sans-serif' font-size='52' font-weight='900' fill='%2302874d' text-anchor='middle' dominant-baseline='middle'%3EGC%3C/text%3E%3Ccircle cx='256' cy='220' r='16' fill='%2302874d'/%3E%3C/svg%3E" type="image/svg+xml">
+
+  <!-- ================================================ -->
+  <!-- CACHE BUSTING: CRITICAL FOR MOBILE PWA UPDATES   -->
+  <!-- Forces fresh loads of manifest + service-worker  -->
+  <!-- ================================================ -->
+  <script>
+    // Unique timestamp generated EVERY page load
+    window.GEORUTA_CACHE_BUST = Date.now();
+    
+    // Dynamically inject manifest with timestamp (bypass browser cache)
+    (function injectManifestWithCacheBust() {
+      const link = document.createElement('link');
+      link.rel = 'manifest';
+      link.href = `manifest.json?v=${window.GEORUTA_CACHE_BUST}`;
+      document.head.appendChild(link);
+    })();
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=system-ui&amp;display=swap');
+    
+    :root {
+      --primary: #02874d;
+      --secondary: #5f452a;
+      --bg: #f8f1e3;
+      --card: #ffffff;
+      --text: #2c241f;
+      --text-light: #5f452a;
+      --success: #02874d;
+      --border: #e6d9c7;
+      --shadow: 0 4px 12px rgba(95, 69, 42, 0.08);
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+    
+    /* Header */
+    header {
+      background: linear-gradient(135deg, var(--primary), #036e40);
+      color: white;
+      padding: 20px 0;
+      box-shadow: 0 2px 8px rgba(2, 135, 77, 0.25);
+    }
+    
+    .header-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .logo-icon {
+      width: 52px;
+      height: 52px;
+      flex-shrink: 0;
+    }
+    
+    .logo-text {
+      font-size: 1.55rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    
+    .logo-subtitle {
+      font-size: 0.82rem;
+      opacity: 0.9;
+      font-weight: 500;
+    }
+    
+    /* Offline banner */
+    .offline-banner {
+      background: #d97706;
+      color: white;
+      padding: 8px 16px;
+      text-align: center;
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: none;
+    }
+    
+    .offline-banner.show {
+      display: block;
+    }
+    
+    /* Main content */
+    main {
+      padding: 24px 0 40px;
+    }
+    
+    .section {
+      margin-bottom: 28px;
+    }
+    
+    .section-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--secondary);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .section-title::before {
+      content: '';
+      display: inline-block;
+      width: 5px;
+      height: 22px;
+      background: var(--primary);
+      border-radius: 3px;
+    }
+    
+    /* Cards */
+    .card {
+      background: var(--card);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+    
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+    
+    @media (min-width: 640px) {
+      .grid-2 {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    
+    /* Location selection */
+    .location-select {
+      display: grid;
+      gap: 14px;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .form-group label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--secondary);
+    }
+    
+    select, input[type="text"] {
+      width: 100%;
+      padding: 14px 18px;
+      font-size: 1rem;
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+      color: var(--text);
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    
+    select:focus, input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(2, 135, 77, 0.1);
+    }
+    
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 24px;
+      font-size: 1rem;
+      font-weight: 700;
+      border-radius: 14px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      text-decoration: none;
+      min-height: 52px;
+      font-family: inherit;
+    }
+    
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 4px 14px rgba(2, 135, 77, 0.35);
+    }
+    
+    .btn-primary:hover {
+      background: #036e40;
+      transform: translateY(-1px);
+    }
+    
+    .btn-secondary {
+      background: #f4e9d8;
+      color: var(--secondary);
+      font-weight: 600;
+      border: 2px solid #e6d9c7;
+    }
+    
+    .btn-secondary:hover {
+      background: #e6d9c7;
+    }
+    
+    .btn-danger {
+      background: #c2410e;
+      color: white;
+      font-weight: 600;
+    }
+    
+    .btn-sm {
+      padding: 7px 14px;
+      font-size: 0.875rem;
+      min-height: 36px;
+      border-radius: 10px;
+    }
+    
+    .btn-icon {
+      padding: 0;
+      width: 38px;
+      height: 38px;
+      font-size: 1.05rem;
+      border-radius: 10px;
+    }
+    
+    /* GC Input */
+    .gc-input-group {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .gc-input-group input {
+      flex: 1;
+      text-transform: uppercase;
+      font-family: monospace;
+      letter-spacing: 1px;
+    }
+    
+    /* Dashboard */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 14px;
+    }
+    
+    .stat-card {
+      background: white;
+      border-radius: 18px;
+      padding: 18px 16px;
+      text-align: center;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+    
+    .stat-value {
+      font-size: 2.15rem;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--primary);
+      margin: 4px 0;
+    }
+    
+    .stat-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-light);
+    }
+    
+    /* Progress */
+    .progress-container {
+      background: #f4e9d8;
+      border-radius: 9999px;
+      height: 14px;
+      overflow: hidden;
+      margin: 8px 0 4px;
+      border: 1px solid #e6d9c7;
+    }
+    
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(to right, var(--primary), #036e40);
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 9999px;
+    }
+    
+    .progress-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-light);
+    }
+    
+    /* Province list */
+    .province-list {
+      display: grid;
+      gap: 14px;
+    }
+    
+    .province-card {
+      background: white;
+      border-radius: 18px;
+      padding: 16px 18px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      transition: transform 0.1s ease;
+    }
+    
+    .province-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 11px;
+    }
+    
+    .province-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--secondary);
+    }
+    
+    .province-country {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 20px;
+      background: #f4e9d8;
+      color: var(--secondary);
+    }
+    
+    .province-stats {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.875rem;
+      margin-bottom: 10px;
+    }
+    
+    .caches-count {
+      font-weight: 700;
+      color: var(--primary);
+      background: #e6f4ea;
+      padding: 1px 9px;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+    }
+    
+    .gc-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    
+    .gc-tag {
+      display: inline-flex;
+      align-items: center;
+      background: #f4e9d8;
+      color: var(--secondary);
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-family: monospace;
+      text-decoration: none;
+      transition: all 0.1s ease;
+      border: 1px solid #e6d9c7;
+    }
+    
+    .gc-tag:hover {
+      background: #e6d9c7;
+      transform: translateY(-1px);
+    }
+    
+    .gc-tag .remove {
+      margin-left: 6px;
+      width: 16px;
+      height: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      font-weight: 900;
+      color: #c2410e;
+      background: #f4e9d8;
+      border-radius: 50%;
+      line-height: 1;
+      cursor: pointer;
+      transition: all 0.1s ease;
+    }
+    
+    .gc-tag .remove:hover {
+      background: #c2410e;
+      color: white;
+    }
+    
+    .province-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    
+    /* Search */
+    .search-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    
+    .search-bar input {
+      flex: 1;
+    }
+    
+    /* Sync section */
+    .sync-section {
+      background: #fff;
+      border-radius: 20px;
+      padding: 22px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+    
+    .sync-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .import-area {
+      margin-top: 16px;
+    }
+    
+    textarea {
+      width: 100%;
+      padding: 14px;
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      font-family: monospace;
+      font-size: 0.9rem;
+      resize: vertical;
+      min-height: 92px;
+    }
+    
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #2c241f;
+      color: white;
+      padding: 12px 22px;
+      border-radius: 50px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+      font-weight: 600;
+      font-size: 0.95rem;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      z-index: 9999;
+      max-width: 92%;
+      text-align: center;
+    }
+    
+    .toast.show {
+      display: flex;
+    }
+    
+    .toast.success {
+      background: var(--primary);
+    }
+    
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(44, 36, 31, 0.65);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      padding: 20px;
+    }
+    
+    .modal-overlay.show {
+      display: flex;
+    }
+    
+    .modal {
+      background: white;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      overflow: hidden;
+    }
+    
+    .modal-header {
+      padding: 18px 20px;
+      background: #f4e9d8;
+      font-weight: 700;
+      color: var(--secondary);
+    }
+    
+    .modal-body {
+      padding: 22px 20px;
+    }
+    
+    .modal-footer {
+      padding: 14px 20px;
+      background: #f8f1e3;
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    
+    /* Responsive tweaks */
+    @media (max-width: 480px) {
+      .logo-text {
+        font-size: 1.35rem;
+      }
+      .stat-value {
+        font-size: 1.85rem;
+      }
+      .province-name {
+        font-size: 1rem;
+      }
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 30px 20px;
+      color: var(--text-light);
+      font-size: 0.95rem;
+    }
+    
+    .empty-state svg {
+      margin-bottom: 8px;
+      opacity: 0.4;
+    }
+    
+    .geocaching-green {
+      color: var(--primary);
+    }
+    
+    .gc-link {
+      color: #02874d;
+      text-decoration: none;
+    }
+    
+    .filter-tabs {
+      display: flex;
+      background: #f4e9d8;
+      border-radius: 9999px;
+      padding: 4px;
+      margin-bottom: 14px;
+      width: fit-content;
+    }
+    
+    .filter-tab {
+      padding: 7px 17px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .filter-tab.active {
+      background: white;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="container">
+      <div class="header-content">
+        <div class="logo">
+          <!-- Inline SVG logo for header -->
+          <svg width="52" height="52" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="256" cy="256" r="240" fill="#f8f1e3" stroke="#f4e9d8" stroke-width="32"/>
+            <circle cx="256" cy="175" r="105" fill="#ffffff"/>
+            <path d="M256 280 L185 420 L327 420 Z" fill="#ffffff"/>
+            <rect x="186" y="115" width="140" height="95" rx="14" fill="#f4e9d8" stroke="#5f452a" stroke-width="14"/>
+            <line x1="200" y1="145" x2="312" y2="145" stroke="#5f452a" stroke-width="10" stroke-linecap="round"/>
+            <text x="256" y="182" font-family="Arial, Helvetica, sans-serif" font-size="52" font-weight="900" fill="#02874d" text-anchor="middle" dominant-baseline="middle">GC</text>
+            <circle cx="256" cy="220" r="16" fill="#02874d"/>
+          </svg>
+          <div>
+            <div class="logo-text">GeoRuta</div>
+            <div class="logo-subtitle">Contador de Provincias</div>
+          </div>
+        </div>
+        <div style="text-align: right; font-size: 0.75rem; line-height: 1;">
+          <div style="font-weight:700;">PWA</div>
+          <div style="opacity:0.85; font-size:0.7rem;">Offline</div>
+        </div>
+      </div>
+    </div>
+  </header>
+  
+  <!-- Offline Banner -->
+  <div id="offline-banner" class="offline-banner">
+    📡 Estás offline. Todos los cambios se guardan localmente.
+  </div>
+  
+  <main class="container">
+    <!-- Location Selection -->
+    <div class="section">
+      <div class="section-title">📍 Seleccionar Provincia</div>
+      <div class="card">
+        <div class="grid grid-2 location-select">
+          <div class="form-group">
+            <label for="country">País</label>
+            <select id="country" onchange="updateProvinces()">
+              <option value="España">🇪🇸 España</option>
+              <option value="Portugal">🇵🇹 Portugal</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="province">Provincia / Distrito</label>
+            <select id="province">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Cache Registration -->
+    <div class="section">
+      <div class="section-title">🗺️ Registrar Cache</div>
+      <div class="card">
+        <div class="gc-input-group">
+          <input type="text" id="gc-code" placeholder="GC12345" maxlength="10" oninput="formatGCCode(this)">
+          <button class="btn btn-primary" onclick="addCacheRegistration()" style="min-width: 160px;">
+            Añadir Visita
+          </button>
+        </div>
+        <div style="font-size: 0.78rem; color: #5f452a; margin-top: 9px; padding-left: 4px;">
+          Formato: GC seguido de letras/números (ej. GC8F2KX)
+        </div>
+      </div>
+    </div>
+    
+    <!-- Progress Dashboard -->
+    <div class="section">
+      <div class="section-title">📊 Dashboard de Progreso</div>
+      <div class="grid grid-2">
+        <!-- Stats -->
+        <div class="card">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-label">Provincias visitadas</div>
+              <div id="provinces-visited" class="stat-value">0</div>
+              <div class="stat-label" style="margin-top:2px;">/ <span id="total-provinces">72</span></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Caches encontradas</div>
+              <div id="caches-found" class="stat-value">0</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Progress -->
+        <div class="card">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:4px;">
+            <div>
+              <div style="font-weight:700; font-size:1rem;">Progreso total</div>
+              <div id="progress-percentage" style="font-size:2.1rem; font-weight:800; line-height:1; color:#02874d;">0%</div>
+            </div>
+            <div style="flex:1; margin-top:6px;">
+              <div class="progress-container">
+                <div id="progress-bar" class="progress-bar" style="width: 0%;"></div>
+              </div>
+            </div>
+          </div>
+          <div class="progress-info">
+            <span id="progress-text">0 / 72 provincias</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Province History / List -->
+    <div class="section">
+      <div class="section-title">📋 Historial de Provincias</div>
+      
+      <div class="card" style="padding-bottom: 18px;">
+        <!-- Search + Filters -->
+        <div class="search-bar">
+          <input type="text" id="search-input" placeholder="Buscar provincia..." oninput="filterProvinceList()">
+          <button class="btn btn-secondary btn-sm" onclick="clearSearch()">Limpiar</button>
+        </div>
+        
+        <!-- Filter tabs -->
+        <div class="filter-tabs">
+          <div class="filter-tab active" onclick="setFilter('all')" id="filter-all">Todas</div>
+          <div class="filter-tab" onclick="setFilter('España')" id="filter-España">🇪🇸 España</div>
+          <div class="filter-tab" onclick="setFilter('Portugal')" id="filter-Portugal">🇵🇹 Portugal</div>
+        </div>
+        
+        <div id="province-list" class="province-list">
+          <!-- Dynamically populated by JS -->
+        </div>
+      </div>
+    </div>
+    
+    <!-- Sync / Share Section -->
+    <div class="section">
+      <div class="section-title">🔄 Sincronizar / Compartir</div>
+      <div class="sync-section">
+        <div style="margin-bottom: 14px; font-size: 0.95rem; color: #5f452a;">
+          Copia tu progreso para compartir por WhatsApp o guárdalo como backup.
+        </div>
+        
+        <div class="sync-buttons">
+          <button class="btn btn-primary" onclick="copyDataToClipboard()">
+            📋 Copiar Datos
+          </button>
+          <button class="btn btn-secondary" onclick="showExportModal()">
+            📤 Exportar JSON
+          </button>
+        </div>
+        
+        <div class="import-area">
+          <div style="font-size: 0.9rem; font-weight:600; margin-bottom:6px; color:#5f452a;">Importar progreso:</div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <textarea id="import-data" placeholder="Pega aquí el código de datos (GC o JSON)..."></textarea>
+          </div>
+          <button onclick="importData()" class="btn btn-secondary" style="margin-top: 10px; width: 100%;">
+            ⬇️ Importar Datos
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+  
+  <!-- Footer -->
+  <footer style="text-align:center; padding: 22px 12px; font-size:0.75rem; color:#5f452a; opacity:0.75;">
+    GeoRuta • Hecho para geocachers • Datos guardados localmente • PWA
+  </footer>
+  
+  <!-- Toast -->
+  <div id="toast" class="toast"></div>
+  
+  <!-- Confirmation Modal -->
+  <div id="modal-overlay" class="modal-overlay" onclick="hideModal()">
+    <div class="modal" onclick="event.stopImmediatePropagation()">
+      <div class="modal-header" id="modal-title">Confirmar acción</div>
+      <div class="modal-body" id="modal-body">
+        <!-- Content set by JS -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="hideModal()">Cancelar</button>
+        <button class="btn btn-primary" id="modal-confirm-btn">Confirmar</button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // ============== DATA & CONSTANTS ==============
+    const SPAIN_PROVINCES = [
+      "Álava", "Albacete", "Alicante", "Almería", "Asturias", "Ávila", "Badajoz", "Baleares", 
+      "Barcelona", "Bizkaia", "Burgos", "Cáceres", "Cádiz", "Cantabria", "Castellón", "Ceuta", 
+      "Ciudad Real", "Córdoba", "Cuenca", "Girona", "Gipuzkoa", "Granada", "Guadalajara", 
+      "Huelva", "Huesca", "Jaén", "La Coruña", "La Rioja", "Las Palmas", "León", "Lleida", 
+      "Lugo", "Madrid", "Málaga", "Melilla", "Murcia", "Navarra", "Ourense", "Palencia", 
+      "Pontevedra", "Salamanca", "Santa Cruz de Tenerife", "Segovia", "Sevilla", "Soria", 
+      "Tarragona", "Teruel", "Toledo", "Valencia", "Valladolid", "Zamora", "Zaragoza"
+    ];
+    
+    const PORTUGAL_PROVINCES = [
+      "Aveiro", "Beja", "Braga", "Bragança", "Castelo Branco", "Coimbra", "Évora", "Faro", 
+      "Guarda", "Leiria", "Lisboa", "Portalegre", "Porto", "Santarém", "Setúbal", 
+      "Viana do Castelo", "Vila Real", "Viseu", "Azores", "Madeira"
+    ];
+    
+    const TOTAL_PROVINCES = SPAIN_PROVINCES.length + PORTUGAL_PROVINCES.length; // 52 + 20 = 72
+    
+    let progressData = {
+      "España": {},
+      "Portugal": {}
+    };
+    
+    let currentFilter = 'all';
+    
+    // ============== PWA: SERVICE WORKER ==============
+    function registerServiceWorker() {
+      if ('serviceWorker' in navigator) {
+        // CACHE BUSTING for service-worker.js
+        const swUrl = `./service-worker.js?v=${window.GEORUTA_CACHE_BUST || Date.now()}`;
+        
+        navigator.serviceWorker.register(swUrl)
+          .then(registration => {
+            console.log('Service Worker registered with cache busting:', registration.scope);
+            
+            // Optional: Force update check on load (helps mobile stale cache issues)
+            if (registration.waiting) {
+              registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+          })
+          .catch(err => {
+            console.log('SW registration failed:', err);
+          });
+      }
+    }
+    
+    // ============== LOCALSTORAGE ==============
+    const STORAGE_KEY = 'georuta_progress_v1';
+    
+    function saveData() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(progressData));
+      } catch (e) {
+        console.warn('Could not save to localStorage');
+      }
+    }
+    
+    function loadData() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          // Merge safely
+          if (parsed && typeof parsed === 'object') {
+            progressData = {
+              "España": parsed["España"] || {},
+              "Portugal": parsed["Portugal"] || {}
+            };
+          }
+        }
+      } catch (e) {
+        console.warn('Could not load data, starting fresh.');
+        progressData = { "España": {}, "Portugal": {} };
+      }
+    }
+    
+    // ============== HELPER FUNCTIONS ==============
+    function formatGCCode(input) {
+      let val = input.value.toUpperCase().trim();
+      // Remove any non-alphanumeric except allow "GC" prefix
+      if (!val.startsWith('GC')) {
+        if (val.length > 0) val = 'GC' + val.replace(/[^A-Z0-9]/g, '');
+      } else {
+        val = 'GC' + val.substring(2).replace(/[^A-Z0-9]/g, '');
+      }
+      // Limit to GC + 7 chars
+      if (val.length > 9) val = val.substring(0, 9);
+      input.value = val;
+    }
+    
+    function isValidGCCode(code) {
+      return /^GC[A-Z0-9]{1,7}$/.test(code);
+    }
+    
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast show ${type === 'success' ? 'success' : ''}`;
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2900);
+    }
+    
+    function updateOfflineBanner() {
+      const banner = document.getElementById('offline-banner');
+      if (!navigator.onLine) {
+        banner.classList.add('show');
+      } else {
+        banner.classList.remove('show');
+      }
+    }
+    
+    // ============== PROVINCES DROPDOWN ==============
+    function updateProvinces() {
+      const country = document.getElementById('country').value;
+      const provinceSelect = document.getElementById('province');
+      
+      provinceSelect.innerHTML = '';
+      
+      let provinces = [];
+      if (country === 'España') {
+        provinces = SPAIN_PROVINCES;
+      } else {
+        provinces = PORTUGAL_PROVINCES;
+      }
+      
+      // Sort alphabetically for better UX
+      provinces = [...provinces].sort();
+      
+      provinces.forEach(prov => {
+        const option = document.createElement('option');
+        option.value = prov;
+        option.textContent = prov;
+        provinceSelect.appendChild(option);
+      });
+    }
+    
+    // ============== ADD CACHE ==============
+    function addCacheRegistration() {
+      const country = document.getElementById('country').value;
+      const province = document.getElementById('province').value;
+      const gcInput = document.getElementById('gc-code');
+      const gcCode = gcInput.value.trim().toUpperCase();
+      
+      if (!province) {
+        showToast('Selecciona una provincia', 'error');
+        return;
+      }
+      
+      if (!gcCode) {
+        showToast('Introduce un código GC', 'error');
+        return;
+      }
+      
+      if (!isValidGCCode(gcCode)) {
+        showToast('Código GC inválido. Debe empezar por GC + alfanumérico (ej: GC8F2KX)', 'error');
+        return;
+      }
+      
+      // Initialize province if needed
+      if (!progressData[country]) progressData[country] = {};
+      if (!progressData[country][province]) {
+        progressData[country][province] = [];
+      }
+      
+      // Check if already exists
+      const existing = progressData[country][province];
+      if (existing.includes(gcCode)) {
+        showToast('Este GC ya está registrado en ' + province, 'error');
+        gcInput.value = '';
+        return;
+      }
+      
+      // Add it
+      existing.push(gcCode);
+      
+      // Save + update
+      saveData();
+      updateAllUI();
+      
+      // Clear input
+      gcInput.value = '';
+      
+      showToast('✅ ' + gcCode + ' registrado en ' + province);
+      
+      // Scroll to list
+      setTimeout(() => {
+        const listEl = document.getElementById('province-list');
+        if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 450);
+    }
+    
+    // ============== REMOVE / EDIT FUNCTIONS ==============
+    function removeGCCode(country, province, gcCode) {
+      if (!progressData[country] || !progressData[country][province]) return;
+      
+      const index = progressData[country][province].indexOf(gcCode);
+      if (index > -1) {
+        progressData[country][province].splice(index, 1);
+        
+        // If no more codes, remove the province
+        if (progressData[country][province].length === 0) {
+          delete progressData[country][province];
+        }
+        
+        saveData();
+        updateAllUI();
+        showToast('GC eliminado: ' + gcCode);
+      }
+    }
+    
+    function removeProvince(country, province) {
+      if (confirm(`¿Eliminar ${province} y todas sus caches?`)) {
+        if (progressData[country] && progressData[country][province]) {
+          delete progressData[country][province];
+          saveData();
+          updateAllUI();
+          showToast('Provincia eliminada: ' + province);
+        }
+      }
+    }
+    
+    function addMoreToProvince(country, province) {
+      const gc = prompt(`Introduce código GC para añadir a ${province}:`);
+      if (!gc) return;
+      
+      const gcCode = gc.trim().toUpperCase();
+      
+      if (!isValidGCCode(gcCode)) {
+        showToast('Código GC inválido');
+        return;
+      }
+      
+      if (!progressData[country]) progressData[country] = {};
+      if (!progressData[country][province]) progressData[country][province] = [];
+      
+      if (progressData[country][province].includes(gcCode)) {
+        showToast('Ya está registrado');
+        return;
+      }
+      
+      progressData[country][province].push(gcCode);
+      saveData();
+      updateAllUI();
+      showToast('Añadido ' + gcCode);
+    }
+    
+    // ============== STATS CALCULATION ==============
+    function calculateStats() {
+      let provincesVisited = 0;
+      let totalCaches = 0;
+      
+      ['España', 'Portugal'].forEach(country => {
+        const provinces = progressData[country] || {};
+        provincesVisited += Object.keys(provinces).length;
+        
+        Object.values(provinces).forEach(codes => {
+          totalCaches += codes.length;
+        });
+      });
+      
+      const percentage = TOTAL_PROVINCES > 0 ? Math.round((provincesVisited / TOTAL_PROVINCES) * 100) : 0;
+      
+      return {
+        provincesVisited,
+        totalCaches,
+        percentage,
+        totalProvinces: TOTAL_PROVINCES
+      };
+    }
+    
+    function updateStats() {
+      const stats = calculateStats();
+      
+      document.getElementById('provinces-visited').textContent = stats.provincesVisited;
+      document.getElementById('caches-found').textContent = stats.totalCaches;
+      document.getElementById('progress-percentage').textContent = stats.percentage + '%';
+      
+      // Progress bar
+      const progressBar = document.getElementById('progress-bar');
+      progressBar.style.width = stats.percentage + '%';
+      
+      document.getElementById('progress-text').textContent = `${stats.provincesVisited} / ${stats.totalProvinces} provincias`;
+    }
+    
+    // ============== PROVINCE LIST RENDER ==============
+    function renderProvinceList(filter = 'all', searchTerm = '') {
+      const container = document.getElementById('province-list');
+      container.innerHTML = '';
+      
+      let hasItems = false;
+      
+      const term = searchTerm.toLowerCase().trim();
+      
+      ['España', 'Portugal'].forEach(country => {
+        if (filter !== 'all' && filter !== country) return;
+        
+        const provinces = progressData[country] || {};
+        
+        // Sort provinces alphabetically
+        const provinceNames = Object.keys(provinces).sort();
+        
+        provinceNames.forEach(province => {
+          const codes = provinces[province] || [];
+          
+          // Apply search filter
+          if (term && !province.toLowerCase().includes(term)) return;
+          
+          hasItems = true;
+          
+          const card = document.createElement('div');
+          card.className = 'province-card';
+          
+          // Header
+          let html = `
+            <div class="province-header">
+              <div>
+                <span class="province-name">${province}</span>
+              </div>
+              <span class="province-country">${country}</span>
+            </div>
+            
+            <div class="province-stats">
+              <span class="caches-count">${codes.length} cache${codes.length !== 1 ? 's' : ''}</span>
+            </div>
+            
+            <div class="gc-tags">
+          `;
+          
+          // GC tags
+          codes.forEach(gc => {
+            html += `
+              <a href="https://coord.info/${gc}" target="_blank" class="gc-tag" title="Abrir en Geocaching.com">
+                ${gc}
+                <span class="remove" onclick="event.preventDefault(); event.stopImmediatePropagation(); removeGCCode('${country}', '${province}', '${gc}');">×</span>
+              </a>
+            `;
+          });
+          
+          html += `</div>`;
+          
+          // Actions
+          html += `
+            <div class="province-actions">
+              <button class="btn btn-secondary btn-sm" onclick="addMoreToProvince('${country}', '${province}')">
+                + Añadir GC
+              </button>
+              <button class="btn btn-danger btn-sm" onclick="removeProvince('${country}', '${province}')">
+                Eliminar provincia
+              </button>
+            </div>
+          `;
+          
+          card.innerHTML = html;
+          container.appendChild(card);
+        });
+      });
+      
+      if (!hasItems) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.innerHTML = `
+          <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#5f452a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+          <div style="margin-top:6px;"><strong>No hay provincias registradas</strong><br>Añade tu primera cache usando los controles superiores.</div>
+        `;
+        container.appendChild(empty);
+      }
+    }
+    
+    function filterProvinceList() {
+      const searchInput = document.getElementById('search-input').value;
+      renderProvinceList(currentFilter, searchInput);
+    }
+    
+    function setFilter(filter) {
+      currentFilter = filter;
+      
+      // Update tabs
+      document.querySelectorAll('.filter-tab').forEach(tab => {
+        tab.classList.remove('active');
+        if (filter === 'all' && tab.id === 'filter-all') tab.classList.add('active');
+        else if (tab.id === `filter-${filter}`) tab.classList.add('active');
+      });
+      
+      const searchVal = document.getElementById('search-input').value;
+      renderProvinceList(currentFilter, searchVal);
+    }
+    
+    function clearSearch() {
+      document.getElementById('search-input').value = '';
+      renderProvinceList(currentFilter, '');
+    }
+    
+    // ============== UPDATE ALL UI ==============
+    function updateAllUI() {
+      updateStats();
+      const search = document.getElementById('search-input').value;
+      renderProvinceList(currentFilter, search);
+    }
+    
+    // ============== COPY / SHARE ==============
+    function generateShareData() {
+      // Create a compact but readable string for easy sharing (WhatsApp friendly)
+      let compact = '';
+      
+      ['España', 'Portugal'].forEach(country => {
+        const provs = progressData[country] || {};
+        Object.keys(provs).forEach(prov => {
+          const codes = provs[prov];
+          if (codes.length > 0) {
+            const shortCountry = country === 'España' ? 'ES' : 'PT';
+            compact += `${shortCountry}:${prov}:${codes.join(',')};`;
+          }
+        });
+      });
+      
+      if (!compact) return '';
+      
+      // Return both compact and JSON for flexibility
+      return {
+        compact: compact,
+        json: JSON.stringify(progressData)
+      };
+    }
+    
+    function copyDataToClipboard() {
+      const data = generateShareData();
+      if (!data || !data.compact) {
+        showToast('No hay datos para copiar');
+        return;
+      }
+      
+      // Prefer compact version for sharing
+      const toCopy = data.compact;
+      
+      navigator.clipboard.writeText(toCopy).then(() => {
+        showToast('✅ Datos copiados al portapapeles (listo para WhatsApp)');
+        
+        // Show a hint
+        setTimeout(() => {
+          const hint = document.createElement('div');
+          hint.style.cssText = 'position:fixed; bottom:65px; left:50%; transform:translateX(-50%); background:#2c241f; color:#ddd; font-size:0.75rem; padding:3px 14px; border-radius:50px;';
+          hint.textContent = 'Formato: ES:Provincia:GC1,GC2;PT:Provincia:GC3';
+          document.body.appendChild(hint);
+          setTimeout(() => hint.remove(), 3400);
+        }, 900);
+      }).catch(() => {
+        // Fallback
+        const textArea = document.createElement('textarea');
+        textArea.value = toCopy;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showToast('✅ Datos copiados (fallback)');
+      });
+    }
+    
+    function showExportModal() {
+      const data = generateShareData();
+      const jsonStr = data.json || '{}';
+      
+      showModal(
+        'Exportar datos',
+        `
+          <p style="margin-bottom:8px;">Copia este JSON o el formato compacto para compartir:</p>
+          <div style="margin: 12px 0;">
+            <div style="font-size:0.8rem; font-weight:600;">Compacto (WhatsApp):</div>
+            <textarea style="height:70px; font-size:0.85rem;" readonly>${data.compact || 'Sin datos'}</textarea>
+          </div>
+          <div style="margin: 12px 0;">
+            <div style="font-size:0.8rem; font-weight:600;">JSON completo:</div>
+            <textarea style="height:110px; font-size:0.85rem;" readonly>${jsonStr}</textarea>
+          </div>
+        `,
+        'Cerrar',
+        () => hideModal()
+      );
+    }
+    
+    // ============== IMPORT DATA ==============
+    function parseCompactData(str) {
+      const result = { "España": {}, "Portugal": {} };
+      
+      if (!str) return result;
+      
+      const parts = str.split(';').filter(p => p.trim());
+      
+      parts.forEach(part => {
+        const segments = part.trim().split(':');
+        if (segments.length < 3) return;
+        
+        const countryCode = segments[0].trim();
+        const province = segments[1].trim();
+        const codesStr = segments.slice(2).join(':'); // in case of weird colon
+        const codes = codesStr.split(',').map(c => c.trim().toUpperCase()).filter(c => c);
+        
+        const country = countryCode === 'ES' ? 'España' : (countryCode === 'PT' ? 'Portugal' : null);
+        
+        if (!country || !province || codes.length === 0) return;
+        
+        if (!result[country]) result[country] = {};
+        result[country][province] = codes.filter(isValidGCCode);
+      });
+      
+      return result;
+    }
+    
+    function importData() {
+      const textarea = document.getElementById('import-data');
+      const raw = textarea.value.trim();
+      
+      if (!raw) {
+        showToast('Pega los datos primero');
+        return;
+      }
+      
+      let importedData = null;
+      
+      // Try compact format first
+      if (raw.includes(':') && raw.includes(';')) {
+        importedData = parseCompactData(raw);
+      } 
+      // Try JSON
+      else if (raw.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && (parsed['España'] || parsed['Portugal'])) {
+            importedData = {
+              "España": parsed["España"] || {},
+              "Portugal": parsed["Portugal"] || {}
+            };
+          }
+        } catch(e) {}
+      }
+      
+      if (!importedData) {
+        showToast('Formato no reconocido. Usa el formato compacto o JSON.', 'error');
+        return;
+      }
+      
+      // Confirmation
+      const currentStats = calculateStats();
+      const newProvinces = Object.keys(importedData['España']).length + Object.keys(importedData['Portugal']).length;
+      
+      showModal(
+        'Importar datos',
+        `Se importarán los datos.<br><br>
+        <strong>Provincias nuevas:</strong> ${newProvinces}<br>
+        <strong>Estado actual:</strong> ${currentStats.provincesVisited} provincias.<br><br>
+        <strong>¿Qué quieres hacer?</strong><br>
+        <span style="font-size:0.82rem;">• Fusionar: añade los nuevos datos a los existentes.<br>
+        • Sobrescribir: reemplaza todo el progreso actual.</span>`,
+        'Fusionar',
+        () => {
+          // Merge
+          mergeImport(importedData);
+          hideModal();
+        },
+        'Sobrescribir',
+        () => {
+          // Overwrite
+          progressData = importedData;
+          saveData();
+          updateAllUI();
+          hideModal();
+          showToast('✅ Progreso sobrescrito correctamente');
+          textarea.value = '';
+        }
+      );
+    }
+    
+    function mergeImport(imported) {
+      let added = 0;
+      
+      ['España', 'Portugal'].forEach(country => {
+        if (!progressData[country]) progressData[country] = {};
+        
+        Object.keys(imported[country] || {}).forEach(prov => {
+          const newCodes = imported[country][prov] || [];
+          
+          if (!progressData[country][prov]) {
+            progressData[country][prov] = [];
+          }
+          
+          newCodes.forEach(code => {
+            if (!progressData[country][prov].includes(code)) {
+              progressData[country][prov].push(code);
+              added++;
+            }
+          });
+        });
+      });
+      
+      saveData();
+      updateAllUI();
+      document.getElementById('import-data').value = '';
+      
+      showToast(`✅ Datos fusionados. ${added} nuevas caches añadidas`);
+    }
+    
+    // ============== MODAL ==============
+    let modalConfirmFn = null;
+    
+    function showModal(title, bodyHTML, confirmText = 'Confirmar', confirmFn = null, altText = null, altFn = null) {
+      const overlay = document.getElementById('modal-overlay');
+      const modalTitle = document.getElementById('modal-title');
+      const modalBody = document.getElementById('modal-body');
+      const confirmBtn = document.getElementById('modal-confirm-btn');
+      
+      modalTitle.textContent = title;
+      modalBody.innerHTML = bodyHTML;
+      
+      // Reset buttons
+      confirmBtn.style.display = 'inline-flex';
+      confirmBtn.textContent = confirmText;
+      confirmBtn.onclick = () => {
+        if (confirmFn) confirmFn();
+        else hideModal();
+      };
+      
+      // Handle alt button
+      let altBtn = document.getElementById('modal-alt-btn');
+      if (altBtn) altBtn.remove();
+      
+      if (altText && altFn) {
+        altBtn = document.createElement('button');
+        altBtn.id = 'modal-alt-btn';
+        altBtn.className = 'btn btn-secondary';
+        altBtn.textContent = altText;
+        altBtn.onclick = () => {
+          altFn();
+        };
+        confirmBtn.parentNode.insertBefore(altBtn, confirmBtn);
+      }
+      
+      overlay.style.display = 'flex';
+      overlay.classList.add('show');
+    }
+    
+    function hideModal() {
+      const overlay = document.getElementById('modal-overlay');
+      overlay.style.display = 'none';
+      overlay.classList.remove('show');
+    }
+    
+    // ============== INITIALIZE APP ==============
+    function initializeApp() {
+      // Load saved data
+      loadData();
+      
+      // Register SW
+      registerServiceWorker();
+      
+      // Setup country select + populate provinces
+      const countrySelect = document.getElementById('country');
+      countrySelect.addEventListener('change', () => {
+        updateProvinces();
+      });
+      
+      // Initial populate provinces (España)
+      updateProvinces();
+      
+      // Set a sensible default province
+      setTimeout(() => {
+        const provSelect = document.getElementById('province');
+        if (provSelect && provSelect.options.length > 0) {
+          // pick a popular one
+          const options = Array.from(provSelect.options);
+          const defaultProv = options.find(o => o.value === 'Madrid') || options[0];
+          if (defaultProv) provSelect.value = defaultProv.value;
+        }
+      }, 50);
+      
+      // Keyboard support for GC input
+      const gcInput = document.getElementById('gc-code');
+      gcInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          addCacheRegistration();
+        }
+      });
+      
+      // Initial UI render
+      updateAllUI();
+      
+      // Offline detection
+      window.addEventListener('online', updateOfflineBanner);
+      window.addEventListener('offline', updateOfflineBanner);
+      updateOfflineBanner();
+      
+      // Initial filter
+      setFilter('all');
+      
+      // Demo data hint if empty (only on first run)
+      const stats = calculateStats();
+      if (stats.provincesVisited === 0) {
+        // Optional: add demo data comment for dev, but don't populate
+        setTimeout(() => {
+          const list = document.getElementById('province-list');
+          if (list && list.innerHTML.includes('No hay provincias')) {
+            // nothing, user will start fresh
+          }
+        }, 1200);
+      }
+      
+      // Make sure everything is responsive & ready
+      console.log('%c[GeoRuta] PWA initialized successfully.', 'color:#02874d');
+      
+      // Bonus: If user has no data but we want to show a nice tip
+      // (no forced demo)
+    }
+    
+    // Boot the app
+    window.onload = function() {
+      initializeApp();
+      
+      // Optional: expose for debugging in console
+      window.GeoRuta = {
+        getData: () => progressData,
+        resetData: () => { progressData = { "España": {}, "Portugal": {} }; localStorage.removeItem(STORAGE_KEY); location.reload(); }
+      };
+    };
+    
+    // Handle closing modal on escape
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        const overlay = document.getElementById('modal-overlay');
+        if (overlay.classList.contains('show')) {
+          hideModal();
+        }
+      }
+    });
+  </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a1aeafbf5dcc0424',t:'MTc4NDAxMjgwNQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "GeoRuta: Contador de Provincias",
+  "short_name": "GeoRuta",
+  "description": "Rastrea tu progreso de Geocaching en España y Portugal. ¡Offline ready!",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f8f1e3",
+  "theme_color": "#02874d",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["travel", "lifestyle", "utilities"]
+}
