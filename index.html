@@ -63,24 +63,56 @@
     
     /* Header */
     header {
-      background: linear-gradient(135deg, var(--primary), #036e40);
-      color: white;
-      padding: 20px 0;
-      box-shadow: 0 2px 8px rgba(2, 135, 77, 0.25);
-    }
-    
-    .header-content {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    .header-logo {
-      height: 48px;
-      width: auto;
-      max-width: 100%;
-      object-fit: contain;
-    }
+ /* Header */
+header {
+  background: linear-gradient(135deg, var(--primary), #036e40);
+  color: white;
+  padding: 20px 0;
+  box-shadow: 0 2px 8px rgba(2, 135, 77, 0.25);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-logo {
+  height: 48px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+/* === MÓVIL: Solo el logo al 100% del ancho, SIN fondo verde === */
+@media (max-width: 640px) {
+  header {
+    background: transparent !important;
+    background-image: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  header .container,
+  .header-content {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .header-logo {
+    width: 100% !important;
+    height: auto !important;
+    max-width: 100% !important;
+    display: block !important;
+    object-fit: contain;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
     
     /* Offline banner */
     .offline-banner {
