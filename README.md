@@ -10,7 +10,8 @@ Una aplicación web progresiva 100% offline diseñada para llevar el conteo de p
 
 - **Selección de ubicación**:
   - Países: España 🇪🇸 y Portugal 🇵🇹
-  - Provincias/Distritos completos (52 de España + Ceuta y Melilla + 20 de Portugal incluyendo Azores y Madeira)
+  - España: 52 provincias (incluyendo Ceuta y Melilla)
+  - Portugal: **308 concelhos** (municipios) — equivalentes a las "provincias" en Geocaching (incluyendo Azores y Madeira)
 
 - **Registro de caches**:
   - Entrada de códigos GC con validación automática (GC + alfanumérico)
